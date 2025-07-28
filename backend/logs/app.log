@@ -1,0 +1,2 @@
+[2025-07-28 14:14:57] ERROR: Job detail failed {"job_id":"3","error":"SQLSTATE[42S22]: Column not found: 1054 Unknown column 'c.country_name' in 'field list'"}
+[2025-07-28 14:15:14] ERROR: Job detail failed {"job_id":"2","error":"SQLSTATE[42S22]: Column not found: 1054 Unknown column 'c.country_name' in 'field list'"}

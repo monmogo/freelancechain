@@ -1,4 +1,53 @@
 <?php
+
+function getStatusCodeMessage($status){
+    $codes = [
+        100 => 'Continue',
+        101 => 'Switching Protocols',
+        200 => 'OK',
+        201 => 'Created',
+        202 => 'Accepted',
+        203 => 'Non-Authoritative Information',
+        204 => 'No Content',
+        205 => 'Reset Content',
+        206 => 'Partial Content',
+        300 => 'Multiple Choices',
+        301 => 'Moved Permanently',
+        302 => 'Found',
+        303 => 'See Other',
+        304 => 'Not Modified',
+        305 => 'Use Proxy',
+        306 => '(Unused)',
+        307 => 'Temporary Redirect',
+        400 => 'Bad Request',
+        401 => 'Unauthorized',
+        402 => 'Payment Required',
+        403 => 'Forbidden',
+        404 => 'Not Found',
+        405 => 'Method Not Allowed',
+        406 => 'Not Acceptable',
+        407 => 'Proxy Authentication Required',
+        408 => 'Request Timeout',
+        409 => 'Conflict',
+        410 => 'Gone',
+        411 => 'Length Required',
+        412 => 'Precondition Failed',
+        413 => 'Request Entity Too Large',
+        414 => 'Request-URI Too Long',
+        415 => 'Unsupported Media Type',
+        416 => 'Requested Range Not Satisfiable',
+        417 => 'Expectation Failed',
+        500 => 'Internal Server Error',
+        501 => 'Not Implemented',
+        502 => 'Bad Gateway',
+        503 => 'Service Unavailable',
+        504 => 'Gateway Timeout',
+        505 => 'HTTP Version Not Supported'
+    ];
+
+    return (isset($codes[$status])) ? $codes[$status] : '';
+}
+
 // Enhanced CORS Headers
 function setCORSHeaders() {
     // Allow specific origins
@@ -116,7 +165,6 @@ function verifyJWT($token) {
         
         return $data;
     } catch (Exception $e) {
-        error_log("JWT verification error: " . $e->getMessage());
         return false;
     }
 }
@@ -159,15 +207,14 @@ function generateRandomString($length = 32) {
     return bin2hex(random_bytes($length / 2));
 }
 
-// Log Error with Context
+// Log Error - Use system error log only
 function logError($message, $context = []) {
     $timestamp = date('Y-m-d H:i:s');
-    $contextStr = !empty($context) ? json_encode($context) : '';
-    $logMessage = "[$timestamp] ERROR: $message $contextStr" . PHP_EOL;
-    error_log($logMessage, 3, __DIR__ . '/../logs/app.log');
+    $contextStr = !empty($context) ? ' | Context: ' . json_encode($context) : '';
+    error_log("[$timestamp] FreelanceChain Error: $message$contextStr");
 }
 
-// Log Activity
+// Log Activity - Simplified version
 function logActivity($user_id, $action, $entity_type = null, $entity_id = null, $metadata = []) {
     try {
         $database = new Database();
@@ -194,7 +241,7 @@ function logActivity($user_id, $action, $entity_type = null, $entity_id = null, 
             $user_agent
         ]);
     } catch (Exception $e) {
-        logError("Failed to log activity", ['error' => $e->getMessage()]);
+        // Silently fail - don't break the main flow
     }
 }
 
@@ -222,7 +269,6 @@ function sendNotification($user_id, $type, $title, $message, $related_data = nul
         
         return $db->lastInsertId();
     } catch (Exception $e) {
-        logError("Failed to send notification", ['error' => $e->getMessage()]);
         return false;
     }
 }
@@ -283,7 +329,6 @@ function updateJobSummary($job_id) {
         
         return true;
     } catch (Exception $e) {
-        logError("Failed to update job summary", ['job_id' => $job_id, 'error' => $e->getMessage()]);
         return false;
     }
 }
@@ -383,7 +428,6 @@ function updateUserStats($user_id) {
         
         return true;
     } catch (Exception $e) {
-        logError("Failed to update user stats", ['user_id' => $user_id, 'error' => $e->getMessage()]);
         return false;
     }
 }
@@ -511,7 +555,6 @@ function updateFreelancerProfile($user_id) {
         
         return true;
     } catch (Exception $e) {
-        logError("Failed to update freelancer profile", ['user_id' => $user_id, 'error' => $e->getMessage()]);
         return false;
     }
 }
@@ -534,7 +577,6 @@ function updateJobProposalCount($job_id) {
         
         return true;
     } catch (Exception $e) {
-        logError("Failed to update job proposal count", ['job_id' => $job_id, 'error' => $e->getMessage()]);
         return false;
     }
 }
@@ -602,13 +644,24 @@ function updateConversationCounters($conversation_id, $sender_id) {
         
         return true;
     } catch (Exception $e) {
-        logError("Failed to update conversation counters", ['conversation_id' => $conversation_id, 'error' => $e->getMessage()]);
         return false;
     }
 }
 
-// Create logs directory if it doesn't exist
-if (!file_exists(__DIR__ . '/../logs')) {
-    mkdir(__DIR__ . '/../logs', 0755, true);
+// Load environment variables function
+function loadEnvironment() {
+    $env_file = __DIR__ . '/../.env';
+    if (file_exists($env_file)) {
+        $lines = file($env_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        foreach ($lines as $line) {
+            if (strpos($line, '=') !== false && strpos($line, '#') !== 0) {
+                list($key, $value) = explode('=', $line, 2);
+                $_ENV[trim($key)] = trim($value);
+            }
+        }
+    }
 }
+
+// Call loadEnvironment when functions.php is included
+loadEnvironment();
 ?>

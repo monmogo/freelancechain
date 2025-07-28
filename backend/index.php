@@ -22,6 +22,10 @@ switch (true) {
     case preg_match('#^/api/auth/login$#', $path) && $request_method === 'POST':
         require_once 'api/auth/login.php';
         break;
+
+    case preg_match('#^/api/auth/refresh$#', $path) && $request_method === 'POST':
+        require_once 'api/auth/refresh.php';
+        break;
         
     case preg_match('#^/api/auth/logout$#', $path) && $request_method === 'POST':
         require_once 'api/auth/logout.php';
