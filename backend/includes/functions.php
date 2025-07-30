@@ -1,5 +1,9 @@
 <?php
 
+// ============================================================================
+// FreelanceChain Backend Functions
+// ============================================================================
+
 function getStatusCodeMessage($status){
     $codes = [
         100 => 'Continue',
@@ -112,7 +116,7 @@ function isValidPassword($password) {
 
 // Generate JWT Token (Enhanced)
 function generateJWT($user_id, $email, $role) {
-    $secret_key = 'FreelanceChain-2024-Secret-Key-Change-This-In-Production';
+    $secret_key = $_ENV['JWT_SECRET'] ?? getenv('JWT_SECRET');
     
     $header = json_encode(['typ' => 'JWT', 'alg' => 'HS256']);
     $payload = json_encode([
@@ -120,8 +124,8 @@ function generateJWT($user_id, $email, $role) {
         'email' => $email,
         'role' => $role,
         'iat' => time(),
-        'exp' => time() + (24 * 60 * 60), // 24 hours
-        'iss' => 'FreelanceChain' // Issuer
+        'exp' => $_ENV['JWT_EXPIRY'] ?? (time() + (24 * 60 * 60)), // Default 24 hours
+        'iss' => $_ENV['JWT_ISSUER'],
     ]);
     
     $base64Header = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($header));
@@ -137,7 +141,7 @@ function generateJWT($user_id, $email, $role) {
 function verifyJWT($token) {
     if (empty($token)) return false;
     
-    $secret_key = 'FreelanceChain-2024-Secret-Key-Change-This-In-Production';
+    $secret_key = $_ENV['JWT_SECRET'] ?? getenv('JWT_SECRET');
     
     $parts = explode('.', $token);
     if (count($parts) !== 3) return false;
