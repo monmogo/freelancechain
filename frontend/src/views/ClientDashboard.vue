@@ -817,7 +817,7 @@
       
       async loadCategories() {
         try {
-          const response = await apiService.get('/api/jobs/categories.php')
+          const response = await apiService.get('/jobs/categories.php')
           if (response.data.success) {
             this.categories = response.data.data
           }
