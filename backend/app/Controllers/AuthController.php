@@ -3,12 +3,10 @@ require_once __DIR__ . '/../../services/SimpleJWTService.php';
 
 class AuthController extends Controller {
     private $userModel;
-    private $jwtService;
     
     public function __construct() {
         parent::__construct();
         $this->userModel = new User();
-        $this->jwtService = new SimpleJWTService();
     }
     
     public function register() {
@@ -76,6 +74,11 @@ class AuthController extends Controller {
     
     public function login() {
         $data = $this->getRequestData();
+
+        // Validate input
+        if (empty($data['email']) || empty($data['password'])) {
+            $this->error('Email and password are required', 400);
+        }
         
         $this->validate($data, [
             'email' => 'required|email',

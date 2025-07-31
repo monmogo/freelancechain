@@ -1,49 +1,39 @@
 <?php
 abstract class Controller {
-    protected $user;
+    protected $user = null;
+    protected SimpleJWTService $jwtService;
     
     public function __construct() {
-        $this->user = getCurrentUser();
+        $this->jwtService = new SimpleJWTService();
     }
     
-    protected function success($data = null, $message = 'Success', $status = 200) {
-        $response = [
-            'success' => true,
-            'message' => $message,
-            'data' => $data,
-            'timestamp' => time()
-        ];
-        jsonResponse($response, $status);
-    }
-    
-    protected function error($message = 'Error', $status = 400, $errors = null) {
-        $response = [
-            'success' => false,
-            'message' => $message,
-            'timestamp' => time()
-        ];
+    protected function requireAuth() {
+        $token = $this->jwtService->extractTokenFromHeader();
         
-        if ($errors) {
-            $response['errors'] = $errors;
+        if (!$token) {
+            $this->error('Authentication required', 401);
         }
         
-        jsonResponse($response, $status);
-    }
-    
-    protected function requireAuth($roles = null) {
-        if (!$this->user) {
-            $this->error('Unauthorized', 401);
+        try {
+            $payload = $this->jwtService->verifyToken($token, 'access');
+            
+            // Set user data from JWT payload
+            $this->user = [
+                'user_id' => (int)$payload['sub'],
+                'email' => $payload['email'],
+                'role' => $payload['role'],
+                'permissions' => $payload['permissions'] ?? []
+            ];
+            
+            return $this->user;
+            
+        } catch (Exception $e) {
+            logError("Authentication failed", [
+                'error' => $e->getMessage(),
+                'token' => substr($token, 0, 20) . '...'
+            ]);
+            $this->error('Invalid or expired token', 401);
         }
-        
-        if ($roles && !in_array($this->user['role'], (array)$roles)) {
-            $this->error('Access denied', 403);
-        }
-        
-        return $this->user;
-    }
-    
-    protected function getRequestData() {
-        return getJSONInput();
     }
     
     protected function validate($data, $rules) {
@@ -81,5 +71,76 @@ abstract class Controller {
         }
         
         return $data;
+    }
+
+    protected function requireRole($requiredRole) {
+        $this->requireAuth();
+        
+        if ($this->user['role'] !== $requiredRole) {
+            $this->error('Insufficient permissions', 403);
+        }
+    }
+    
+    /**
+     * Check if user has permission
+     */
+    protected function hasPermission($permission) {
+        if (!$this->user) return false;
+        
+        $permissions = $this->user['permissions'] ?? [];
+        return in_array('*', $permissions) || in_array($permission, $permissions);
+    }
+    
+    /**
+     * Get request data (JSON or form)
+     */
+    protected function getRequestData() {
+        $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+        
+        if (strpos($contentType, 'application/json') !== false) {
+            $json = file_get_contents('php://input');
+            $data = json_decode($json, true);
+            return $data ?? [];
+        }
+        
+        return $_POST;
+    }
+    
+    /**
+     * Success response
+     */
+    protected function success($data = null, $message = null, $status = 200) {
+        http_response_code($status);
+        
+        $response = [
+            'success' => true,
+            'timestamp' => time()
+        ];
+        
+        if ($message) $response['message'] = $message;
+        if ($data !== null) $response['data'] = $data;
+        
+        header('Content-Type: application/json');
+        echo json_encode($response, JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+    
+    /**
+     * Error response
+     */
+    protected function error($message, $status = 400, $errors = null) {
+        http_response_code($status);
+        
+        $response = [
+            'success' => false,
+            'message' => $message,
+            'timestamp' => time()
+        ];
+        
+        if ($errors) $response['errors'] = $errors;
+        
+        header('Content-Type: application/json');
+        echo json_encode($response, JSON_UNESCAPED_UNICODE);
+        exit;
     }
 }

@@ -116,7 +116,7 @@ function isValidPassword($password) {
 
 // Generate JWT Token (Enhanced)
 function generateJWT($user_id, $email, $role) {
-    $secret_key = $_ENV['JWT_SECRET'] ?? getenv('JWT_SECRET');
+    $secret_key = $_ENV['JWT_ACCESS_SECRET'] ?? getenv('JWT_ACCESS_SECRET');
     
     $header = json_encode(['typ' => 'JWT', 'alg' => 'HS256']);
     $payload = json_encode([
@@ -140,9 +140,8 @@ function generateJWT($user_id, $email, $role) {
 // Verify JWT Token (Enhanced)
 function verifyJWT($token) {
     if (empty($token)) return false;
-    
-    $secret_key = $_ENV['JWT_SECRET'] ?? getenv('JWT_SECRET');
-    
+    $secret_key = $_ENV['JWT_ACCESS_SECRET'] ?? getenv('JWT_ACCESS_SECRET');
+
     $parts = explode('.', $token);
     if (count($parts) !== 3) return false;
     
